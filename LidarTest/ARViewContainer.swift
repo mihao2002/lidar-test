@@ -13,6 +13,11 @@ struct ARViewContainer: UIViewRepresentable {
         config.environmentTexturing = .automatic
         config.planeDetection = [.horizontal, .vertical] // or just [.horizontal]
 
+        // Add cumulative mesh node to the scene root
+        let cumulativeMeshNode = SCNNode()
+        sceneView.scene.rootNode.addChildNode(cumulativeMeshNode)
+        context.coordinator.cumulativeMeshNode = cumulativeMeshNode
+
         sceneView.session.run(config)
         return sceneView
     }
@@ -25,22 +30,28 @@ struct ARViewContainer: UIViewRepresentable {
 
     class Coordinator: NSObject, ARSCNViewDelegate {
         var didDetect = false
+        // Store the cumulative mesh node
+        var cumulativeMeshNode: SCNNode?
+        // Optionally, keep track of processed anchors to avoid duplicates
+        var processedAnchorIdentifiers = Set<UUID>()
 
         func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
             guard let meshAnchor = anchor as? ARMeshAnchor else { return }
-
-            // Remove old geometry
-            node.childNodes.forEach { $0.removeFromParentNode() }
-
-            // Rebuild mesh with updated geometry
+            guard let cumulativeMeshNode = cumulativeMeshNode else { return }
+            // Optionally, avoid duplicate geometry by checking processed anchors
+            // For cumulative effect, just add new geometry
             let updatedMeshNode = createWireframeMeshNode(from: meshAnchor)
-            node.addChildNode(updatedMeshNode)
+            cumulativeMeshNode.addChildNode(updatedMeshNode)
         }
 
         func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
             if let meshAnchor = anchor as? ARMeshAnchor {
+                guard let cumulativeMeshNode = cumulativeMeshNode else { return }
+                // Optionally, avoid duplicate geometry by checking processed anchors
+                if processedAnchorIdentifiers.contains(meshAnchor.identifier) { return }
+                processedAnchorIdentifiers.insert(meshAnchor.identifier)
                 let wireframeNode = createWireframeMeshNode(from: meshAnchor)
-                node.addChildNode(wireframeNode)
+                cumulativeMeshNode.addChildNode(wireframeNode)
             }
             
             guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
