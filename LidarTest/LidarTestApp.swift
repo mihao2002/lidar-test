@@ -5,13 +5,15 @@
 //  Created by Hao Mi on 6/19/25.
 //
 
+import UIKit
 import SwiftUI
 
 @main
 struct LidarTestApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ARViewContainer()
+                .edgesIgnoringSafeArea(.all)
         }
     }
 }
